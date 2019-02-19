@@ -26,7 +26,7 @@ conda install ipython
 # maskrnn_benchmark and coco api dependencies
 pip install ninja yacs cython matplotlib
 
-# follow PyTorch installation in https://pytorch.org/get-started/locally/
+# follow PyTorch installation in http//pytorch.org/get-started/locally/s:
 # we give the instructions for CUDA 9.0
 conda install pytorch-nightly -c pytorch
 
