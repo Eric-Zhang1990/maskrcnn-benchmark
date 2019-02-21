@@ -33,9 +33,9 @@ def get_extensions():
                           os.path.join(extensions_dir, "cpu", "ROIAlign_cpu.cpp")]
     custom_ops_sources_cuda = [os.path.join(extensions_dir, "cuda", "nms.cu"),
                                os.path.join(extensions_dir, "cuda", "ROIAlign_cuda.cu")]
-    custom_ops_libraries = ["opencv_world330"]
+    # custom_ops_libraries = ["opencv_world330"]
     extra_compile_args = {"cxx": [ "-DMS_WIN64"]}
-    define_macros = [()]
+    define_macros = [("NO_OPENCV",None)]
 
     if torch.cuda.is_available() and CUDA_HOME is not None:
         extension = CUDAExtension
@@ -53,25 +53,18 @@ def get_extensions():
     sources = [os.path.join(extensions_dir, s) for s in sources]
 
     include_dirs = [extensions_dir]
-    include_dirs .append("D:/opencv/opencv/build/include")
-    library_dirs = ["D:/opencv/opencv/build/x64/vc14/lib"]
+    # include_dirs .append("D:/opencv/opencv/build/include")
+    # library_dirs = ["D:/opencv/opencv/build/x64/vc14/lib"]
     print(include_dirs)
     ext_modules = [
         extension(
-            "maskrcnn_benchmark._C",
-            sources,
-            include_dirs=include_dirs,
-            define_macros=define_macros,
-            extra_compile_args=extra_compile_args,
-        ),
-        extension(
-            "maskrcnn_benchmark.lib.custom_ops",
+            "maskrcnn_benchmark.lib.custom_ops_no_opencv",
             sources=custom_ops_sources,
             include_dirs=copy.deepcopy(include_dirs),
             define_macros=copy.deepcopy(define_macros),
             extra_compile_args=copy.deepcopy(extra_compile_args),
-            library_dirs =library_dirs,
-            libraries=custom_ops_libraries
+            # library_dirs =library_dirs,
+            # libraries=custom_ops_libraries
         ),
     ]
 

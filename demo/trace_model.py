@@ -6,15 +6,14 @@ import torch
 
 from PIL import Image
 from maskrcnn_benchmark.config import cfg
-from predictor import COCODemo
+from demo.predictor import COCODemo
 from maskrcnn_benchmark.structures.image_list import ImageList
 
 if __name__ == "__main__":
     # load config from file and command-line arguments
-    cfg.merge_from_file("../configs/caffe2/e2e_mask_rcnn_R_50_FPN_1x_caffe2.yaml")
-    cfg.merge_from_list(["MODEL.DEVICE", "cpu"])
+    cfg.merge_from_file("../configs/e2e_mask_rcnn_R_50_FPN_1x.yaml")
+    cfg.merge_from_list(["MODEL.DEVICE", "cuda"])
     cfg.freeze()
-
     # prepare object that handles inference plus adds predictions on top of image
     coco_demo = COCODemo(
         cfg,
@@ -42,7 +41,9 @@ def single_image_to_top_predictions(image):
     image = image - torch.tensor(cfg.INPUT.PIXEL_MEAN)[:, None, None]
     # should also do variance...
     image_list = ImageList(image.unsqueeze(0), [(int(image.size(-2)), int(image.size(-1)))])
+    image_list = image_list.to(coco_demo.device)
     result, = coco_demo.model(image_list)
+    result = result.to(coco_demo.cpu_device)
     scores = result.get_field("scores")
     keep = (scores >= coco_demo.confidence_threshold)
     result = (result.bbox[keep],
@@ -133,7 +134,8 @@ def process_image_with_traced_model(image):
 
 
 if __name__ == "__main__":
-    pil_image = Image.open("3915380994_2e611b1779_z.jpg").convert("RGB")
+    pil_image = Image.open("../timg.jpeg").convert("RGB")
+    pil_image = pil_image.resize((480,480))
     # convert to BGR format
     image = torch.from_numpy(numpy.array(pil_image)[:, :, [2, 1, 0]])
     original_image = image
@@ -145,25 +147,27 @@ if __name__ == "__main__":
     with torch.no_grad():
         traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
 
+    # traced_model.save("end_to_end_model.pt")
+
     @torch.jit.script
     def end_to_end_model(image):
         boxes, labels, masks, scores = traced_model(image)
         result_image = combine_masks(image, labels, masks, scores, boxes, 0.5, 1, rectangle=True)
         return result_image
-    end_to_end_model.save('end_to_end_model.pt')
+    # end_to_end_model.save('end_to_end_model.pt')
 
     result_image = process_image_with_traced_model(original_image)
 
     # self.show_mask_heatmaps not done
     pyplot.imshow(result_image[:, :, [2, 1, 0]])
     pyplot.show()
-
-    # second image
-    image2 = Image.open('17790319373_bd19b24cfc_k.jpg').convert("RGB")
-    image2 = image2.resize((640, 480), Image.BILINEAR)
-    image2 = torch.from_numpy(numpy.array(image2)[:, :, [2, 1, 0]])
-    result_image2 = process_image_with_traced_model(image2)
-
-    # self.show_mask_heatmaps not done
-    pyplot.imshow(result_image2[:, :, [2, 1, 0]])
-    pyplot.show()
+    #
+    # # second image
+    # image2 = Image.open('17790319373_bd19b24cfc_k.jpg').convert("RGB")
+    # image2 = image2.resize((640, 480), Image.BILINEAR)
+    # image2 = torch.from_numpy(numpy.array(image2)[:, :, [2, 1, 0]])
+    # result_image2 = process_image_with_traced_model(image2)
+    #
+    # # self.show_mask_heatmaps not done
+    # pyplot.imshow(result_image2[:, :, [2, 1, 0]])
+    # pyplot.show()

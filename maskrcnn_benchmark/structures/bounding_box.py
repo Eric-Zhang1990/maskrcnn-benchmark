@@ -76,12 +76,12 @@ class BoxList(object):
         # self.mode
         xmin, ymin, xmax, ymax = self._split_into_xyxy()
         if mode == "xyxy":
-            bbox = torch.cat((xmin, ymin, xmax, ymax), dim=-1)
+            bbox = torch.cat((xmin, ymin, xmax, ymax), dim=1) #
             bbox = BoxList(bbox, self.size, mode=mode)
         else:
             TO_REMOVE = 1
             bbox = torch.cat(
-                (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), dim=-1
+                (xmin, ymin, xmax - xmin + TO_REMOVE, ymax - ymin + TO_REMOVE), dim=1 #
             )
             bbox = BoxList(bbox, self.size, mode=mode)
         bbox._copy_extra_fields(self)

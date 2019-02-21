@@ -1,9 +1,13 @@
 // Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 #include <torch/script.h>
+
+#ifndef NO_OPENCV
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/opencv.hpp>
+#endif
 
+#include "torch/extension.h"
 #include "nms.h"
 #include "ROIAlign.h"
 
@@ -28,7 +32,7 @@ Tensor add_annotations(const Tensor& image, const Tensor& labels_, const Tensor&
   while (std::getline(sstream, s, ',')) {
     class_names.emplace_back(s);
   }
-
+#ifndef NO_OPENCV
   cv::Mat cv_res(res.size(0), res.size(1), CV_8UC3, (void*) res.data<uint8_t>());
   for (int64_t i = 0; i < labels.size(0); i++) {
     std::stringstream text;
@@ -36,9 +40,14 @@ Tensor add_annotations(const Tensor& image, const Tensor& labels_, const Tensor&
     text << class_names[labels[i]] << ": " << scores[i];
     putText(cv_res, text.str(), cv::Point(bboxes[i][0], bboxes[i][1]), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(color[0], color[1], color[2]), 1);
   }
+ #endif
   return res;
 }
 
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+  m.def("add_annotations", &add_annotations, "Add_annotations");
+  m.def("upsample_bilinear", &upsample_bilinear, "Upsample_bilinear");
+}
 
 static auto registry =
   torch::jit::RegisterOperators()

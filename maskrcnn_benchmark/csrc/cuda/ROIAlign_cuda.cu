@@ -253,6 +253,9 @@ __global__ void RoIAlignBackwardFeature(const int nthreads, const T* top_diff,
   } // CUDA_1D_KERNEL_LOOP
 } // RoIAlignBackward
 
+int ceil_div(int a, int b){
+    return (a + b - 1) / b;
+}
 
 at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
                                  const at::Tensor& rois,
@@ -272,7 +275,10 @@ at::Tensor ROIAlign_forward_cuda(const at::Tensor& input,
   auto output_size = num_rois * pooled_height * pooled_width * channels;
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(output_size, 512L), 4096L));
+
+
+
+  dim3 grid(std::min(ceil_div((int)output_size, 512), 4096));
   dim3 block(512);
 
   if (output.numel() == 0) {
@@ -317,7 +323,7 @@ at::Tensor ROIAlign_backward_cuda(const at::Tensor& grad,
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(grad.numel(), 512L), 4096L));
+  dim3 grid(std::min(ceil_div((int)grad.numel(), 512), 4096));
   dim3 block(512);
 
   // handle possibly empty gradients

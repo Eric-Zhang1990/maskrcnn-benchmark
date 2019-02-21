@@ -106,6 +106,9 @@ __global__ void RoIPoolFBackward(const int nthreads, const T* top_diff,
     }
   }
 }
+int ceil_div2(int a, int b){
+    return (a + b - 1) / b;
+}
 
 std::tuple<at::Tensor, at::Tensor> ROIPool_forward_cuda(const at::Tensor& input,
                                 const at::Tensor& rois,
@@ -126,7 +129,7 @@ std::tuple<at::Tensor, at::Tensor> ROIPool_forward_cuda(const at::Tensor& input,
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(output_size, 512L), 4096L));
+  dim3 grid(std::min(ceil_div2(output_size, 512), 4096));
   dim3 block(512);
 
   if (output.numel() == 0) {
@@ -173,7 +176,7 @@ at::Tensor ROIPool_backward_cuda(const at::Tensor& grad,
 
   cudaStream_t stream = at::cuda::getCurrentCUDAStream();
 
-  dim3 grid(std::min(THCCeilDiv(grad.numel(), 512L), 4096L));
+  dim3 grid(std::min(ceil_div2(grad.numel(), 512), 4096));
   dim3 block(512);
 
   // handle possibly empty gradients
