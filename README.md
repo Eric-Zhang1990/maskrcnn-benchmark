@@ -1,5 +1,75 @@
-# Faster R-CNN and Mask R-CNN in PyTorch 1.0
 
+# Faster R-CNN and Mask R-CNN in PyTorch 1.0 - JIT script on windows
+This fork version aims at building a JIT script model to run on windows C++
+envrionment
+
+## How to use
+#### 1. install the project.
+if you want to build with opencv(**not recommend**),pelease edit the setup.py,and run the command
+```bash
+python setup.py develop.
+``` 
+
+if you do not build with opencv(**recommend**),run the commdline:
+```bash
+python setup2.py develop
+```
+### 2. train model
+- model can be trained both on linux and windows, a linux version of this
+project can be download at the [linux-branch.](https://github.com/zhuqiang00099/maskrcnn-benchmark/tree/scripting-linux)
+I build with opencv in linux version.
+
+#### 3. trace model
+- run demo/trace_model.py
+- if you do not use opencv(which is recommend),you can run to here
+  and save the model.
+```python
+    with torch.no_grad():
+        traced_model = torch.jit.trace(single_image_to_top_predictions, (image,))
+
+    traced_model.save("end_to_end_model.pt")
+```
+- if you build with opencv,ok,you can run all the code.But,your model will
+always depends on opencv,and for C++ use,it does not help,next I will explain it.
+
+### 4. load the model with libtorch C++
+- an example is in the demo/cpp/test_torch_script.cpp. you need 
+[dlfcn](https://github.com/dlfcn-win32/dlfcn-win32) and [opencv](https://github.com/opencv/opencv)
+
+
+
+### why do not recommend build with opencv
+- opencv in this project is used in [custom_ops.cpp](https://github.com/zhuqiang00099/maskrcnn-benchmark/blob/scripting-windows/maskrcnn_benchmark/csrc/custom_ops/custom_ops.cpp)
+```cpp
+#ifndef NO_OPENCV
+  cv::Mat cv_res(res.size(0), res.size(1), CV_8UC3, (void*) res.data<uint8_t>());
+  for (int64_t i = 0; i < labels.size(0); i++) {
+    std::stringstream text;
+    text.precision(2);
+    text << class_names[labels[i]] << ": " << scores[i];
+    putText(cv_res, text.str(), cv::Point(bboxes[i][0], bboxes[i][1]), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(color[0], color[1], color[2]), 1);
+  }
+ #endif
+  return res;
+}
+```
+the code aims at add annotations on the image, but for C++ use,we need the struct data
+.For example,where is the object([box]() or [mask]()).So, we need the network output, rather than
+a labeld image.For this reason,we will find all the functions in custom_ops.cpp do not help
+for C++ use,except for the static var [registry](),which is used for
+auto register custom operators(like [roi align]()) for jit.
+
+Another reason for do not recommend build with opencv is, you must use the same
+opencv version both in your project and maskrcnn avoid conflict.
+
+
+
+
+
+
+
+
+# Faster R-CNN and Mask R-CNN in PyTorch 1.0 
 This project aims at providing the necessary building blocks for easily
 creating detection and segmentation models using PyTorch 1.0.
 
